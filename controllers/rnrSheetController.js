@@ -74,23 +74,45 @@ const addRowToSheet = async (req, res) => {
     });
 
 
-    if (matchRowIndex !== -1) {
-      // ✅ Update existing row
-      const sheetRowNumber = matchRowIndex + 2;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${sheetTitle}!A${sheetRowNumber}`,
-        valueInputOption: 'USER_ENTERED', // ✅ Ensures formulas are parsed
-        requestBody: {
-          values: [rowData],
-        },
-      });
+ if (matchRowIndex !== -1) {
+  // ✅ Update existing row
+  const sheetRowNumber = matchRowIndex + 2;
 
-      return res.status(200).json({
-        message: `✅ Updated existing row for PropertyCode "${rnrSheetData.PropertyCode}" in sheet "${sheetTitle}".`,
-        updated: rowData,
-      });
-    } else {
+  // Fetch the existing row so we can update only matching keys
+  const existingRow = rows[matchRowIndex] || [];
+
+  // Merge existing data with new values, only for keys that match headers
+  const updatedRow = headers.map((header, colIndex) => {
+    const newValue = rnrSheetData.hasOwnProperty(header) ? rnrSheetData[header] : undefined;
+
+    if (newValue !== undefined) {
+      if (typeof newValue === 'string' && newValue.trim().startsWith('=')) {
+        return newValue.trim(); // Preserve formula
+      }
+      return newValue;
+    }
+
+    // If no new value, retain the existing value
+    return existingRow[colIndex] || "";
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${sheetTitle}!A${sheetRowNumber}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [updatedRow],
+    },
+  });
+
+  return res.status(200).json({
+    message: `✅ Selectively updated row for PropertyCode "${rnrSheetData.PropertyCode}" in sheet "${sheetTitle}".`,
+    updated: updatedRow,
+  });
+}
+
+    
+    else {
       // ➕ Insert new row below header (at row 2)
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
