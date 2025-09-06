@@ -1,3 +1,4 @@
+
 const { google } = require('googleapis');
 
 const addRowToSheet = async (req, res) => {
@@ -23,7 +24,7 @@ const addRowToSheet = async (req, res) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = "1yLQjZTxmXqE9PEexMd9yCvMkyBmNJbHbws6mTFj9-TE";
 
-    // Get metadata to find the correct sheetId
+    // Get sheet metadata
     const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId });
     const sheet = sheetMeta.data.sheets.find(s => s.properties.title === sheetTitle);
     if (!sheet) {
@@ -32,7 +33,7 @@ const addRowToSheet = async (req, res) => {
 
     const sheetId = sheet.properties.sheetId;
 
-    // Fetch header row
+    // Get header row
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!1:1`,
@@ -49,11 +50,12 @@ const addRowToSheet = async (req, res) => {
       return res.status(400).json({ error: '❌ "PropertyCode" column not found in header.' });
     }
 
-    // Fetch all data rows
+    // Fetch data rows
     const dataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!A2:Z`,
     });
+
     const rows = dataResponse.data.values || [];
 
     // Case-insensitive match for PropertyCode
@@ -65,87 +67,50 @@ const addRowToSheet = async (req, res) => {
     const rowData = headers.map(header => {
       let value = rnrSheetData[header];
 
-      // If it's a formula string that should go into Sheets (e.g. starts with `=`)
+      // If it's a formula string that should go into Sheets
       if (typeof value === 'string' && value.trim().startsWith('=')) {
-        return value.trim(); // Keep as-is so it becomes a real formula in Sheets
+        return value.trim();
       }
 
       return value ?? "";
     });
 
+    if (matchRowIndex !== -1) {
+      // ✅ Update existing row
+      const sheetRowNumber = matchRowIndex + 2;
+      const existingRow = rows[matchRowIndex] || [];
 
- if (matchRowIndex !== -1) {
-  // ✅ Update existing row
-  const sheetRowNumber = matchRowIndex + 2;
+      // Merge existing data with new values
+      const updatedRow = headers.map((header, colIndex) => {
+        const newValue = rnrSheetData.hasOwnProperty(header) ? rnrSheetData[header] : undefined;
 
-  // Fetch the existing row so we can update only matching keys
-  const existingRow = rows[matchRowIndex] || [];
+        if (newValue !== undefined) {
+          if (typeof newValue === 'string' && newValue.trim().startsWith('=')) {
+            return newValue.trim();
+          }
+          return newValue;
+        }
 
-  // Merge existing data with new values, only for keys that match headers
-  const updatedRow = headers.map((header, colIndex) => {
-    const newValue = rnrSheetData.hasOwnProperty(header) ? rnrSheetData[header] : undefined;
-
-    if (newValue !== undefined) {
-      if (typeof newValue === 'string' && newValue.trim().startsWith('=')) {
-        return newValue.trim(); // Preserve formula
-      }
-      return newValue;
-    }
-
-    // If no new value, retain the existing value
-    return existingRow[colIndex] || "";
-  });
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${sheetTitle}!A${sheetRowNumber}`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [updatedRow],
-    },
-  });
-
-  return res.status(200).json({
-    message: `✅ Selectively updated row for PropertyCode "${rnrSheetData.PropertyCode}" in sheet "${sheetTitle}".`,
-    updated: updatedRow,
-  });
-}
-
-    
-    else {
-      // ➕ Insert new row below header (at row 2)
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        requestBody: {
-          requests: [
-            {
-              insertDimension: {
-                range: {
-                  sheetId,
-                  dimension: 'ROWS',
-                  startIndex: 1,
-                  endIndex: 2,
-                },
-                inheritFromBefore: false,
-              },
-            },
-          ],
-        },
+        return existingRow[colIndex] || "";
       });
 
-      // Now insert data into the new row (A2)
       await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `${sheetTitle}!A2`,
-        valueInputOption: 'USER_ENTERED', // ✅ Ensures formulas are parsed
+        range: `${sheetTitle}!A${sheetRowNumber}`,
+        valueInputOption: 'USER_ENTERED',
         requestBody: {
-          values: [rowData],
+          values: [updatedRow],
         },
       });
 
       return res.status(200).json({
-        message: `✅ Inserted new row for PropertyCode "${rnrSheetData.PropertyCode}" at top of sheet "${sheetTitle}".`,
-        inserted: rowData,
+        message: `✅ Updated row for PropertyCode "${rnrSheetData.PropertyCode}" in sheet "${sheetTitle}".`,
+        updated: updatedRow,
+      });
+    } else {
+      // ❌ Do not insert — return error
+      return res.status(404).json({
+        error: `❌ PropertyCode "${rnrSheetData.PropertyCode}" not found in sheet "${sheetTitle}". No row was updated.`,
       });
     }
   } catch (error) {
