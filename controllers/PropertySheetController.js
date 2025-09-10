@@ -117,13 +117,25 @@ const fetchPropertySheetData = async (req, res) => {
         ACRoom = sheet.getCell(i + 1, 40).value?.toString().trim();  // Column E
         MFR = sheet.getCell(i + 1, 20).value?.toString().trim();  // Column E
         DA = sheet.getCell(i + 1, 22).value?.toString().trim();  // Column E
-       let excelSerial = sheet.getCell(i + 1, 32).value;
-        let excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel's base date
-        let URHD_Date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
 
-        // Format to dd-MMMM-yyyy (e.g., 01-March-2025)
-        let options = { day: '2-digit', month: 'short', year: 'numeric' };
-        let URHD = URHD_Date.toLocaleDateString('en-GB', options);
+        // Changing Excel date to dd-MMMM-yyyy format for URHD
+        let excelSerial = sheet.getCell(i + 1, 32).value;
+        let excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel's base date
+        let URHD_Date = new Date(excelEpoch.getTime() + excelSerial * 86400000); // Convert serial to JS date
+
+        let currentDate = new Date();
+        let URHD = "";
+
+        // Only format if URHD_Date > currentDate
+        if (URHD_Date > currentDate) {
+          // Format to dd-MMMM-yyyy (e.g., 01-March-2025)
+          let options = { day: '2-digit', month: 'short', year: 'numeric' };
+          URHD = URHD_Date.toLocaleDateString('en-GB', options);
+        }
+
+        // Now URHD will either be the formatted date or an empty string
+
+
         URHA = sheet.getCell(i + 1, 33).value?.toString().trim();
         result.push({
           BedNo: bedNo || "",
