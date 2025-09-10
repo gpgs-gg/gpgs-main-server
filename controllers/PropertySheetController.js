@@ -117,8 +117,14 @@ const fetchPropertySheetData = async (req, res) => {
         ACRoom = sheet.getCell(i + 1, 40).value?.toString().trim();  // Column E
         MFR = sheet.getCell(i + 1, 20).value?.toString().trim();  // Column E
         DA = sheet.getCell(i + 1, 22).value?.toString().trim();  // Column E
-        URHD = sheet.getCell(i + 1, 32).toString().value;  // Column E
-        URHA = sheet.getCell(i + 1, 33).value?.toString().trim(); 
+       let excelSerial = sheet.getCell(i + 1, 32).value;
+        let excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel's base date
+        let URHD_Date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
+
+        // Format to dd-MMMM-yyyy (e.g., 01-March-2025)
+        let options = { day: '2-digit', month: 'short', year: 'numeric' };
+        let URHD = URHD_Date.toLocaleDateString('en-GB', options);
+        URHA = sheet.getCell(i + 1, 33).value?.toString().trim();
         result.push({
           BedNo: bedNo || "",
           RoomNo: roomNo || "",
