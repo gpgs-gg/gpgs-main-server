@@ -70,7 +70,7 @@
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 
 const fetchPropertySheetData = async (req, res) => {
-  const value = req.query.sheetId ; // e.g., "SPREADSHEET_ID,10"
+  const value = req.query.sheetId; // e.g., "SPREADSHEET_ID,10"
   const [spreadsheetId, rowCountStr] = value.split(",");
   const rowCount = parseInt(rowCountStr, 10);
 
@@ -106,10 +106,10 @@ const fetchPropertySheetData = async (req, res) => {
     });
 
     const result = [];
-    let statusCell, bedNo, roomNo, bedStatus , ACRoom , DA , MFR , URHD , URHA;
+    let statusCell, bedNo, roomNo, bedStatus, ACRoom, DA, MFR, URHD, URHA;
     for (let i = 0; i < rowCount; i++) {
       statusCell = sheet.getCell(i + 1, 45);
-       // Column- BedAvailable
+      // Column- BedAvailable
       bedStatus = statusCell?.value?.toString().trim().toLowerCase();
       if (bedStatus === "yes") {
         bedNo = sheet.getCell(i + 1, 3).value?.toString().trim(); // Column D
@@ -117,19 +117,36 @@ const fetchPropertySheetData = async (req, res) => {
         ACRoom = sheet.getCell(i + 1, 40).value?.toString().trim();  // Column E
         MFR = sheet.getCell(i + 1, 20).value?.toString().trim();  // Column E
         DA = sheet.getCell(i + 1, 22).value?.toString().trim();  // Column E
-        URHD = sheet.getCell(i + 1, 32).toString().value;  // Column E
-        URHA = sheet.getCell(i + 1, 33).value?.toString().trim(); 
+
+        // Changing Excel date to dd-MMMM-yyyy format for URHD
+        let excelSerial = sheet.getCell(i + 1, 32).value;
+        let excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel's base date
+        let URHD_Date = new Date(excelEpoch.getTime() + excelSerial * 86400000); // Convert serial to JS date
+
+        let currentDate = new Date();
+        let URHD = "";
+
+        // Only format if URHD_Date > currentDate
+        if (URHD_Date > currentDate) {
+          // Format to dd-MMMM-yyyy (e.g., 01-March-2025)
+          let options = { day: '2-digit', month: 'long', year: 'numeric' };
+          URHD = URHD_Date.toLocaleDateString('en-GB', options);
+        }
+
+        // Now URHD will either be the formatted date or an empty string
+        URHA = sheet.getCell(i + 1, 33).value?.toString().trim();
         result.push({
           BedNo: bedNo || "",
           RoomNo: roomNo || "",
           ACRoom: ACRoom || "",
-          DA : DA || "",
-          MFR : MFR || "",
-          URHD : URHD  || "",
-          URHA : URHA   || ""
+          DA: DA || "",
+          MFR: MFR || "",
+          URHD: URHD || "",
+          URHA: URHA || ""
         });
       }
     }
+    console.log("result", result);
     return res.json({ success: true, total: result.length, data: result });
   } catch (err) {
     console.error("Error:", err.message);

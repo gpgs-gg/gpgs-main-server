@@ -15,6 +15,8 @@ const rnrSheetRoutes = require('../routes/rnrSheetRoutes');
 const createTicketRoutes = require('../routes/createTicketRoutes');
 const fetchTicketTableRoutes = require('../routes/fetchTicketTableRoutes');
 const updateTicketTableRoutes = require('../routes/createTicketRoutes');
+const changePasswordRoutes = require('../routes/changePasswordRoutes');
+
 
 
 const app = express();
@@ -35,6 +37,8 @@ app.use('/api', createTicketRoutes);
 app.use('/api', fetchTicketTableRoutes);
 // app.use('/', express.static('../uploads')); // Serve uploaded files statically
 app.use('/api', updateTicketTableRoutes);
+app.use('/api', changePasswordRoutes);
+
 
 module.exports = app;
 module.exports.handler = serverless(app);
@@ -43,7 +47,7 @@ module.exports.handler = serverless(app);
 
 
 
-// //local server 
+//local server 
 
 // require('dotenv').config();
 // const express = require('express');
@@ -59,6 +63,7 @@ module.exports.handler = serverless(app);
 // const createTicketRoutes = require('./routes/createTicketRoutes');
 // const fetchTicketTableRoutes = require('./routes/fetchTicketTableRoutes');
 // const updateTicketTableRoutes = require('./routes/createTicketRoutes');
+// const changePasswordRoutes = require('./routes/changePasswordRoutes');
 
 // const app = express();
 
@@ -77,6 +82,7 @@ module.exports.handler = serverless(app);
 // app.use('/api', fetchTicketTableRoutes);
 // app.use('/', express.static('../uploads')); // Serve uploaded files statically
 // app.use('/api', updateTicketTableRoutes);
+// app.use('/api', changePasswordRoutes);
 
 // const PORT = 3000;
 // app.listen(PORT, () => {

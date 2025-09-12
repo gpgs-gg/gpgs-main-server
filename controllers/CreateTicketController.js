@@ -117,6 +117,8 @@ const CreateTicket = async (req, res) => {
 
 
 const updateTicketSheetData = async (req, res) => {
+
+  console.log("Received updateTicketSheetData request body:", req.body);
   try {
     if (!req.body || !req.body.TicketID) {
       return res.status(400).json({ error: '❌ Missing "TicketID" in request body.' });

@@ -44,17 +44,21 @@ const fetchPropertySheetData = async (req, res) => {
       const DADue = row["DADue"]?.toString().trim() || "";
       const FullName = row["FullName"]?.toString().trim() || "";
       const PreDueAmt = row["PreDueAmt"]?.toString().trim() || "";
+      const CVD = row["CVD"]?.toString().trim() || "";
+      const NLD = row["NLD"]?.toString().trim() || "";
 
-      if (FullName || CurDueAmt || DADue || PreDueAmt) {
+      if (FullName || CurDueAmt || DADue || PreDueAmt || CVD || NLD ) {
         result.push({
           CurDueAmt,
           DADue,
           FullName,
           PreDueAmt,
+          NLD,
+          CVD
         });
       }
     }
-
+  console.log("Result:", result);
     return res.json({ success: true, total: result.length, data: result });
   } catch (err) {
     console.error("Error:", err.message);
