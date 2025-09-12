@@ -129,11 +129,13 @@ const fetchPropertySheetData = async (req, res) => {
         // Only format if URHD_Date > currentDate
         if (URHD_Date > currentDate) {
           // Format to dd-MMMM-yyyy (e.g., 01-March-2025)
-          let options = { day: '2-digit', month: 'long', year: 'numeric' };
+          let options = { day: '2-digit', month: 'short', year: 'numeric' };
           URHD = URHD_Date.toLocaleDateString('en-GB', options);
         }
 
         // Now URHD will either be the formatted date or an empty string
+
+
         URHA = sheet.getCell(i + 1, 33).value?.toString().trim();
         result.push({
           BedNo: bedNo || "",
