@@ -2,20 +2,19 @@
 
 require('dotenv').config();
 const express = require('express');
-const serverless = require('serverless-http');
 const cors = require('cors');
-
-const sheetRoutes = require('./routes/sheetRoutes');
-const propertiesSheetRoutes = require('./routes/propertiesSheetRoutes');
-const propertySheetRoutes = require('./routes/propertySheetRoutes');
-const employeesRoutes = require('./routes/employeesRoutes');
-const googleSheetRoutes = require('./routes/bedsAvilableRoutes');
-const dueAmountsRoutes = require('./routes/dueAmountsRoutes');
-const rnrSheetRoutes = require('./routes/rnrSheetRoutes');
-const createTicketRoutes = require('./routes/createTicketRoutes');
-const fetchTicketTableRoutes = require('./routes/fetchTicketTableRoutes');
-const updateTicketTableRoutes = require('./routes/createTicketRoutes');
-const changePasswordRoutes = require('./routes/changePasswordRoutes');
+const path = require("path")
+const sheetRoutes = require('../routes/sheetRoutes');
+const propertiesSheetRoutes = require('../routes/propertiesSheetRoutes');
+const propertySheetRoutes = require('../routes/propertySheetRoutes');
+const employeesRoutes = require('../routes/employeesRoutes');
+const googleSheetRoutes = require('../routes/bedsAvilableRoutes');
+const dueAmountsRoutes = require('../routes/dueAmountsRoutes');
+const rnrSheetRoutes = require('../routes/rnrSheetRoutes');
+const createTicketRoutes = require('../routes/createTicketRoutes');
+const fetchTicketTableRoutes = require('../routes/fetchTicketTableRoutes');
+const updateTicketTableRoutes = require('../routes/createTicketRoutes');
+const changePasswordRoutes = require('../routes/changePasswordRoutes');
 
 
 
