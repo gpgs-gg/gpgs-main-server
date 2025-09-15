@@ -2,7 +2,9 @@
 
 require('dotenv').config();
 const express = require('express');
+const serverless = require('serverless-http');
 const cors = require('cors');
+
 const path = require("path")
 const sheetRoutes = require('../routes/sheetRoutes');
 const propertiesSheetRoutes = require('../routes/propertiesSheetRoutes');
@@ -23,7 +25,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // Use prefixed paths (important for serverless)
 // Use same route structure as serverless
@@ -71,6 +72,7 @@ module.exports.handler = serverless(app);
 // app.use(cors());
 // app.use(express.json());
 
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // // Use same route structure as serverless
 // app.use('/api', sheetRoutes);
