@@ -1,9 +1,6 @@
 const { google } = require('googleapis');
 const { AllSheetNames } = require('../Config');
-
 const CreateTicket = async (req, res) => {
-
-  console.log("Received CreateTicket request body:", req.body);
 
   try {
     const auth = new google.auth.GoogleAuth({
@@ -17,7 +14,7 @@ const CreateTicket = async (req, res) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
     const sheetTitle = req.query.sheet || AllSheetNames.TICKET_MASTER_TABLE;
-    
+
     // 🔹 Get sheet metadata
     const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId });
     const sheet = sheetMeta.data.sheets.find(s => s.properties.title === sheetTitle);
@@ -43,7 +40,7 @@ const CreateTicket = async (req, res) => {
     });
     const TicketIDs = dataResponse.data.values?.flat() || [];
 
-    // Generate new TicketID (format: TKT-YYYY-XXXX)
+    // Generate new TicketID
     const currentYear = new Date().getFullYear();
     const lastID = TicketIDs[0] || `TKT-${currentYear}-0000`;
     const lastNumber = parseInt(lastID.split("-")[2]) || 0;
@@ -54,6 +51,11 @@ const CreateTicket = async (req, res) => {
       timeZone: 'Asia/Kolkata',
     });
 
+    // ✅ Handle uploaded files
+    const uploadedFileURLs = req.files?.map(file => {
+      return `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+    }) || [];
+
     // 🔹 Prepare data row
     const rowData = headers.map(header => {
       switch (header) {
@@ -61,16 +63,20 @@ const CreateTicket = async (req, res) => {
           return nextID;
         case 'DateCreated':
           return currentDate;
+        case 'Attachment': // Assuming this is the column to store file URLs
+        case 'Images':
+        case 'Files':
+          return uploadedFileURLs.join(', ');
         default:
           const value = req.body[header];
-          console.log("Value for header", header, ":", value);
           if (typeof value === 'object' && value !== null) {
             return JSON.stringify(value); // convert to string
           }
           return value ?? "";
       }
     });
-    // 🔹 Insert new row at top (after header)
+
+    // 🔹 Insert row
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -90,7 +96,7 @@ const CreateTicket = async (req, res) => {
       },
     });
 
-    // 🔹 Update new row with data
+    // 🔹 Update values
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `${sheetTitle}!A2`,
@@ -104,6 +110,7 @@ const CreateTicket = async (req, res) => {
       message: `✅ New ticket created successfully.`,
       TicketID: nextID,
       inserted: rowData,
+      files: uploadedFileURLs,
     });
 
   } catch (error) {
@@ -116,9 +123,11 @@ const CreateTicket = async (req, res) => {
 
 
 
-const updateTicketSheetData = async (req, res) => {
 
-  console.log("Received updateTicketSheetData request body:", req.body);
+
+
+const updateTicketSheetData = async (req, res) => {
+  const bodyAttachmentRaw = req.body.Attachment || "";
   try {
     if (!req.body || !req.body.TicketID) {
       return res.status(400).json({ error: '❌ Missing "TicketID" in request body.' });
@@ -129,7 +138,9 @@ const updateTicketSheetData = async (req, res) => {
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        private_key: process.env.GOOGLE_PRIVATE_KEY
+          ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+          : '',
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
@@ -137,20 +148,13 @@ const updateTicketSheetData = async (req, res) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
 
-    // Get sheet metadata
-    const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId });
-    const sheet = sheetMeta.data.sheets.find(s => s.properties.title === sheetTitle);
-    if (!sheet) {
-      return res.status(404).json({ error: `❌ Sheet titled "${sheetTitle}" not found.` });
-    }
-
-    // Get header row
+    // Get headers
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!1:1`,
     });
-
     const headers = headerResponse.data.values?.[0] || [];
+
     if (headers.length === 0) {
       return res.status(400).json({ error: '❌ Header row is empty or missing.' });
     }
@@ -160,66 +164,143 @@ const updateTicketSheetData = async (req, res) => {
       return res.status(400).json({ error: '❌ "TicketID" column not found in header.' });
     }
 
-    // Fetch data rows
+    // Fetch all data rows
     const dataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!A2:Z`,
     });
-
     const rows = dataResponse.data.values || [];
 
-    // Case-insensitive TicketID match
+    // Find the matching row
     const matchRowIndex = rows.findIndex(
       row => (row[ticketIdIndex] || "").trim().toLowerCase() === req.body.TicketID.trim().toLowerCase()
     );
 
     if (matchRowIndex === -1) {
       return res.status(404).json({
-        error: `❌ TicketID "${req.body.TicketID}" not found in sheet "${sheetTitle}". No row was updated.`,
+        error: `❌ TicketID "${req.body.TicketID}" not found in sheet "${sheetTitle}".`,
       });
     }
 
-    const existingRow = rows[matchRowIndex] || [];
-   const updatedRow = headers.map((header, colIndex) => {
-  const existingValue = existingRow[colIndex] || "";
-  const newValue = req.body.hasOwnProperty(header) ? req.body[header] : undefined;
+    const rawRow = rows[matchRowIndex] || [];
+    const existingRow = headers.map((_, idx) => rawRow[idx] || "");
 
-  if (newValue !== undefined && newValue !== null) {
-    if (typeof newValue === 'string' && newValue.trim().startsWith('=')) {
-      return newValue.trim();
+    // Prepare uploaded file URLs (from multer uploaded files)
+    const uploadedFileURLs = (req.files || []).map(file =>
+      `${req.protocol}://${req.get('host')}/uploads/${file.filename}`
+    );
+
+    // --- Build partial update ---
+    const updatedColumns = [];
+    const updatedValues = [];
+
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+
+      // Skip TicketID (don't update it)
+      if (header === "TicketID") continue;
+
+      // Handle Attachment column specifically
+      if (header === "Attachment") {
+        // Get raw Attachment string from request body, default to empty string
+        const bodyAttachmentRaw = req.body.Attachment || "";
+
+        // Split existing attachments by comma, trim and filter out any 'blob:' URLs
+
+        // const validUrlPattern = /https?:\/\/localhost:\d+\/[^",]+/g;
+
+        // const existingAttachments = [...bodyAttachmentRaw.matchAll(validUrlPattern)]
+        //   .map(match => match[0].trim())
+        //   .filter(url => !url.startsWith("blob:"));
+
+
+
+        const validUrlPattern = /(https?:\/\/localhost:\d+\/[^",]+|https?:\/\/gpgs-main-server\.vercel\.app\/[^",]+)/g;
+
+        const existingAttachments = [...bodyAttachmentRaw.matchAll(validUrlPattern)]
+          .map(match => match[0].trim())
+          .filter(url => !url.startsWith("blob:"));
+
+
+
+        // Combine existing attachments + newly uploaded URLs
+        const combined = [...existingAttachments, ...uploadedFileURLs].join(", ");
+
+        if (combined.length > 0) {
+          updatedColumns.push(i);
+          updatedValues.push(combined);
+        }
+
+        continue;
+      }
+
+      // Update fields from req.body if present
+      if (Object.prototype.hasOwnProperty.call(req.body, header)) {
+        let value = req.body[header];
+
+        if (typeof value === 'string' && value.trim().startsWith('=')) {
+          // Keep formulas as is
+          value = value.trim();
+        } else if (typeof value === 'object') {
+          // Convert objects to JSON string
+          value = JSON.stringify(value);
+        }
+
+        updatedColumns.push(i);
+        updatedValues.push(value);
+      }
     }
-    // Only allow string, number, or boolean
-    if (['string', 'number', 'boolean'].includes(typeof newValue)) {
-      return newValue;
+
+    // Nothing to update?
+    if (updatedColumns.length === 0) {
+      return res.status(200).json({
+        message: '⚠️ No changes to update.',
+        updated: false,
+      });
     }
-  }
 
-  return existingValue;
-});
+    // Prepare range and update row in sheet
+    const sheetRowNumber = matchRowIndex + 2; // Account for header row offset
 
+    // Convert column indexes to letters (A, B, C, ...)
+    const colLetters = updatedColumns.map(idx =>
+      String.fromCharCode(65 + idx)
+    );
+    const startCol = colLetters[0];
+    const endCol = colLetters[colLetters.length - 1];
 
-    const sheetRowNumber = matchRowIndex + 2; // +2 because data starts at row 2 in sheet
+    const range = `${sheetTitle}!${startCol}${sheetRowNumber}:${endCol}${sheetRowNumber}`;
+
+    // Prepare array of values for the update (in correct order)
+    const rowToUpdate = Array(updatedColumns.length).fill('');
+    updatedColumns.forEach((colIdx, i) => {
+      rowToUpdate[i] = updatedValues[i];
+    });
+
+    // Update the sheet
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetTitle}!A${sheetRowNumber}`,
+      range,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
-        values: [updatedRow],
+        values: [rowToUpdate],
       },
     });
 
     return res.status(200).json({
-      message: `✅ Updated row for TicketID "${req.body.TicketID}" in sheet "${sheetTitle}".`,
-      updated: updatedRow,
+      message: `✅ Ticket "${req.body.TicketID}" updated successfully.`,
+      updatedColumns: updatedColumns.map(i => headers[i]),
+      filesProcessed: req.files?.map(f => f.originalname) || [],
     });
   } catch (error) {
-    console.error("❌ Error inserting/updating row:", error);
-    res.status(500).json({
-      error: '❌ Failed to insert or update row in sheet.',
+    console.error("❌ Error updating sheet:", error);
+    return res.status(500).json({
+      error: '❌ Failed to update ticket.',
       details: error.message,
     });
   }
 };
+
 
 
 module.exports = {
