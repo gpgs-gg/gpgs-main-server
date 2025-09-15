@@ -125,9 +125,9 @@ const CreateTicket = async (req, res) => {
 
 
 
-
 const updateTicketSheetData = async (req, res) => {
   const bodyAttachmentRaw = req.body.Attachment || "";
+  console.log("bodyAttachmentRaw", bodyAttachmentRaw);
   try {
     if (!req.body || !req.body.TicketID) {
       return res.status(400).json({ error: '❌ Missing "TicketID" in request body.' });
@@ -171,7 +171,7 @@ const updateTicketSheetData = async (req, res) => {
     });
     const rows = dataResponse.data.values || [];
 
-    // Find the matching row
+    // Find the matching row index by TicketID
     const matchRowIndex = rows.findIndex(
       row => (row[ticketIdIndex] || "").trim().toLowerCase() === req.body.TicketID.trim().toLowerCase()
     );
@@ -182,100 +182,69 @@ const updateTicketSheetData = async (req, res) => {
       });
     }
 
-    const rawRow = rows[matchRowIndex] || [];
-    const existingRow = headers.map((_, idx) => rawRow[idx] || "");
-
     // Prepare uploaded file URLs (from multer uploaded files)
     const uploadedFileURLs = (req.files || []).map(file =>
       `${req.protocol}://${req.get('host')}/uploads/${file.filename}`
     );
 
-    // --- Build partial update ---
-    const updatedColumns = [];
-    const updatedValues = [];
+    // --- Build partial update by matching header names ---
+    const updates = []; // To store {colIndex, value}
 
-    for (let i = 0; i < headers.length; i++) {
-      const header = headers[i];
+    for (const header of headers) {
+      if (header === "TicketID") continue; // Don't update TicketID column
 
-      // Skip TicketID (don't update it)
-      if (header === "TicketID") continue;
-
-      // Handle Attachment column specifically
       if (header === "Attachment") {
-        // Get raw Attachment string from request body, default to empty string
-        const bodyAttachmentRaw = req.body.Attachment || "";
-
-        // Split existing attachments by comma, trim and filter out any 'blob:' URLs
-
-        // const validUrlPattern = /https?:\/\/localhost:\d+\/[^",]+/g;
-
-        // const existingAttachments = [...bodyAttachmentRaw.matchAll(validUrlPattern)]
-        //   .map(match => match[0].trim())
-        //   .filter(url => !url.startsWith("blob:"));
-
-
-
         const validUrlPattern = /(https?:\/\/localhost:\d+\/[^",]+|https?:\/\/gpgs-main-server\.vercel\.app\/[^",]+)/g;
 
+        // Extract valid existing attachments from req.body.Attachment
         const existingAttachments = [...bodyAttachmentRaw.matchAll(validUrlPattern)]
           .map(match => match[0].trim())
           .filter(url => !url.startsWith("blob:"));
 
-
-
-        // Combine existing attachments + newly uploaded URLs
+        // Combine existing + newly uploaded
         const combined = [...existingAttachments, ...uploadedFileURLs].join(", ");
 
         if (combined.length > 0) {
-          updatedColumns.push(i);
-          updatedValues.push(combined);
+          const colIndex = headers.indexOf(header);
+          updates.push({ colIndex, value: combined });
         }
-
-        continue;
-      }
-
-      // Update fields from req.body if present
-      if (Object.prototype.hasOwnProperty.call(req.body, header)) {
+      } else if (Object.prototype.hasOwnProperty.call(req.body, header)) {
         let value = req.body[header];
 
         if (typeof value === 'string' && value.trim().startsWith('=')) {
-          // Keep formulas as is
-          value = value.trim();
+          value = value.trim(); // preserve formulas
         } else if (typeof value === 'object') {
-          // Convert objects to JSON string
           value = JSON.stringify(value);
         }
 
-        updatedColumns.push(i);
-        updatedValues.push(value);
+        const colIndex = headers.indexOf(header);
+        updates.push({ colIndex, value });
       }
     }
 
-    // Nothing to update?
-    if (updatedColumns.length === 0) {
+    if (updates.length === 0) {
       return res.status(200).json({
         message: '⚠️ No changes to update.',
         updated: false,
       });
     }
 
-    // Prepare range and update row in sheet
-    const sheetRowNumber = matchRowIndex + 2; // Account for header row offset
+    // Google Sheets uses A, B, C... for columns
+    const sheetRowNumber = matchRowIndex + 2; // +2 because rows start at 1 and 1 is header
 
-    // Convert column indexes to letters (A, B, C, ...)
-    const colLetters = updatedColumns.map(idx =>
-      String.fromCharCode(65 + idx)
-    );
-    const startCol = colLetters[0];
-    const endCol = colLetters[colLetters.length - 1];
+    // Sort updates by column index ascending (optional but tidy)
+    updates.sort((a, b) => a.colIndex - b.colIndex);
 
+    const startCol = String.fromCharCode(65 + updates[0].colIndex);
+    const endCol = String.fromCharCode(65 + updates[updates.length - 1].colIndex);
     const range = `${sheetTitle}!${startCol}${sheetRowNumber}:${endCol}${sheetRowNumber}`;
 
-    // Prepare array of values for the update (in correct order)
-    const rowToUpdate = Array(updatedColumns.length).fill('');
-    updatedColumns.forEach((colIdx, i) => {
-      rowToUpdate[i] = updatedValues[i];
-    });
+    // Build row values in order for the range
+    const rowValues = [];
+    for (let i = updates[0].colIndex; i <= updates[updates.length - 1].colIndex; i++) {
+      const update = updates.find(u => u.colIndex === i);
+      rowValues.push(update ? update.value : "");
+    }
 
     // Update the sheet
     await sheets.spreadsheets.values.update({
@@ -283,13 +252,13 @@ const updateTicketSheetData = async (req, res) => {
       range,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
-        values: [rowToUpdate],
+        values: [rowValues],
       },
     });
 
     return res.status(200).json({
       message: `✅ Ticket "${req.body.TicketID}" updated successfully.`,
-      updatedColumns: updatedColumns.map(i => headers[i]),
+      updatedColumns: updates.map(u => headers[u.colIndex]),
       filesProcessed: req.files?.map(f => f.originalname) || [],
     });
   } catch (error) {
