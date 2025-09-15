@@ -2,11 +2,9 @@ const { GoogleSpreadsheet } = require("google-spreadsheet");
 
 const fetchPropertySheetData = async (req, res) => {
   const value =
-    req.query.sheetId ; // Default
-     console.log("value", value)
+    req.query.sheetId; // Default
   // Expecting "spreadsheetId,MonthYear"
-  const [spreadsheetId, currentMonth] = value.split(",");
-
+  const [spreadsheetId, currentMonth , BedCount] = value.split(",");
   if (!spreadsheetId || !currentMonth) {
     return res
       .status(400)
@@ -36,32 +34,31 @@ const fetchPropertySheetData = async (req, res) => {
     }
 
     const rows = await sheet.getRows();
-
     const result = [];
-
+    let i = 0;
     for (const row of rows) {
+      i++;
       const CurDueAmt = row["CurDueAmt"] || "";
-      const DADue = row["DADue"]?.toString().trim() || "";
+      let DADue
+      if (i <= BedCount) {
+        DADue = row["DADue"]?.toString().trim() || "";
+      }
+      // const DADue = row["DADue"]?.toString().trim() || "";
       const FullName = row["FullName"]?.toString().trim() || "";
       const PreDueAmt = row["PreDueAmt"]?.toString().trim() || "";
-      const CVD = row["CVD"]?.toString().trim() || "";
-      const NLD = row["NLD"]?.toString().trim() || "";
-
-      if (FullName || CurDueAmt || DADue || PreDueAmt || CVD || NLD ) {
+      // const CVD = row["CVD"]?.toString().trim() || "";
+      // const NLD = row["NLD"]?.toString().trim() || "";
+      if (FullName || CurDueAmt || DADue || PreDueAmt) {
         result.push({
           CurDueAmt,
           DADue,
           FullName,
-          PreDueAmt,
-          NLD,
-          CVD
+          PreDueAmt
         });
       }
     }
-  console.log("Result:", result);
     return res.json({ success: true, total: result.length, data: result });
   } catch (err) {
-    console.error("Error:", err.message);
     return res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
