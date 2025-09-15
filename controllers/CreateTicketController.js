@@ -125,8 +125,6 @@ const CreateTicket = async (req, res) => {
 
 
 
-
-
 const updateTicketSheetData = async (req, res) => {
   const bodyAttachmentRaw = req.body.Attachment || "";
   console.log("bodyAttachmentRaw", bodyAttachmentRaw);
