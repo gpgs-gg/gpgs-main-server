@@ -9,6 +9,7 @@ const path = require("path")
 const sheetRoutes = require('../routes/sheetRoutes');
 const propertiesSheetRoutes = require('../routes/propertiesSheetRoutes');
 const propertySheetRoutes = require('../routes/propertySheetRoutes');
+const clientRoutes = require('../routes/clientsRoutes');
 const employeesRoutes = require('../routes/employeesRoutes');
 const googleSheetRoutes = require('../routes/bedsAvilableRoutes');
 const dueAmountsRoutes = require('../routes/dueAmountsRoutes');
@@ -37,9 +38,10 @@ app.use('/api', dueAmountsRoutes);
 app.use('/api', rnrSheetRoutes);
 app.use('/api', createTicketRoutes);
 app.use('/api', fetchTicketTableRoutes);
-// app.use('/', express.static('../uploads')); // Serve uploaded files statically
 app.use('/api', updateTicketTableRoutes);
 app.use('/api', changePasswordRoutes);
+app.use('/api', clientRoutes);
+
 
 
 module.exports = app;
@@ -57,8 +59,9 @@ module.exports.handler = serverless(app);
 // const path = require("path")
 // const sheetRoutes = require('./routes/sheetRoutes');
 // const propertiesSheetRoutes = require('./routes/propertiesSheetRoutes');
-// const propertySheetRoutes = require('./routes/propertySheetRoutes');
+// const propertySheetRoutes = require('./routes/propertySheetRoutes');  
 // const employeesRoutes = require('./routes/employeesRoutes');
+// const clientRoutes = require('./routes/clientsRoutes');
 // const googleSheetRoutes = require('./routes/bedsAvilableRoutes');
 // const dueAmountsRoutes = require('./routes/dueAmountsRoutes');
 // const rnrSheetRoutes = require('./routes/rnrSheetRoutes');
@@ -86,6 +89,7 @@ module.exports.handler = serverless(app);
 // app.use('/api', fetchTicketTableRoutes);
 // app.use('/api', updateTicketTableRoutes);
 // app.use('/api', changePasswordRoutes);
+// app.use('/api', clientRoutes);
 
 // const PORT = 3000;
 // app.listen(PORT, () => {
