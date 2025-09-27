@@ -18,7 +18,7 @@ const createTicketRoutes = require('../routes/createTicketRoutes');
 const fetchTicketTableRoutes = require('../routes/fetchTicketTableRoutes');
 const updateTicketTableRoutes = require('../routes/createTicketRoutes');
 const changePasswordRoutes = require('../routes/changePasswordRoutes');
-
+const mainPropertySheetDataForClient = require('../routes/mainSheetDataForClientRoutes');
 
 
 const app = express();
@@ -41,13 +41,10 @@ app.use('/api', fetchTicketTableRoutes);
 app.use('/api', updateTicketTableRoutes);
 app.use('/api', changePasswordRoutes);
 app.use('/api', clientRoutes);
-
-
+app.use('/api', mainPropertySheetDataForClient);
 
 module.exports = app;
 module.exports.handler = serverless(app);
-
-
 
 
 
@@ -69,6 +66,7 @@ module.exports.handler = serverless(app);
 // const fetchTicketTableRoutes = require('./routes/fetchTicketTableRoutes');
 // const updateTicketTableRoutes = require('./routes/createTicketRoutes');
 // const changePasswordRoutes = require('./routes/changePasswordRoutes');
+// const mainPropertySheetDataForClient = require('./routes/mainSheetDataForClientRoutes');
 
 // const app = express();
 
@@ -90,6 +88,7 @@ module.exports.handler = serverless(app);
 // app.use('/api', updateTicketTableRoutes);
 // app.use('/api', changePasswordRoutes);
 // app.use('/api', clientRoutes);
+// app.use('/api', mainPropertySheetDataForClient);
 
 // const PORT = 3000;
 // app.listen(PORT, () => {
