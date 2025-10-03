@@ -1,8 +1,9 @@
 const { GoogleSpreadsheet } = require("google-spreadsheet");
+const { AllSheetNames } = require("../Config");
 
 const fetchClientDetailSheetData = async (req, res) => {
   const spreadsheetId = "1AWJQlzuoxkhuR75GMq1EFpqexqDuI1WsxI14BON1olU";
-  const sheetTitle = "MasterList";
+  const sheetTitle = AllSheetNames.CLIENT_MASTER_TABLE;
 
   if (!spreadsheetId || !sheetTitle) {
     return res.status(400).json({ success: false, message: "Missing sheet ID or title" });

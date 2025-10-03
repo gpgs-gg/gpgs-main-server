@@ -9,8 +9,7 @@ const addRowToSheet = async (req, res) => {
     }
 
     const sheetTitle = `RNR_${selectedMonth}`;
-    console.log(`📝 Target sheet: ${sheetTitle}`);
-    console.log(`🔍 Looking for PropertyCode: ${rnrSheetData.PropertyCode}`);
+  
 
     const auth = new google.auth.GoogleAuth({
       credentials: {

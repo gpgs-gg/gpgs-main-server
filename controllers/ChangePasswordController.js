@@ -2,7 +2,6 @@ const { AllSheetNames } = require("../Config");
 const { google } = require('googleapis');
 
 const changePassword = async (req, res) => {
-  console.log("Received updateTicketSheetData request body:", req.body);
 
   try {
     const { LoginID } = req.body;

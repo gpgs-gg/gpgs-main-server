@@ -3,7 +3,6 @@
 // const fetchPropertySheetDataForClient = async (req, res) => {
 //     const value =
 //         req.query.sheetId; // Default
-//         console.log("value", value)
 //     // Expecting "spreadsheetId,MonthYear"
 //     const [spreadsheetId, currentMonth, BedCount] = value.split(",");
 //     if (!spreadsheetId || !currentMonth) {

@@ -120,14 +120,8 @@
 // };
 
 
-
-
-
-
-
 // const updateTicketSheetData = async (req, res) => {
 //   const bodyAttachmentRaw = req.body.Attachment || "";
-//   console.log("bodyAttachmentRaw", bodyAttachmentRaw);
 //   try {
 //     if (!req.body || !req.body.TicketID) {
 //       return res.status(400).json({ error: '❌ Missing "TicketID" in request body.' });
@@ -436,6 +430,20 @@ const CreateTicket = async (req, res) => {
     res.status(500).json({ error: 'Failed to insert ticket row' });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // === Update Ticket ===
 const updateTicketSheetData = async (req, res) => {

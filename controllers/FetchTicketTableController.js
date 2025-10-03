@@ -4,7 +4,6 @@ const { AllSheetNames } = require("../Config");
 const fetchTicketSheetData = async (req, res) => {
   const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
   const sheetTitle = AllSheetNames.TICKET_MASTER_TABLE;
-  console.log("Sheet Title:", sheetTitle);
   if (!spreadsheetId || !sheetTitle) {
     return res.status(400).json({ success: false, message: "Missing sheet ID or title" });
   }

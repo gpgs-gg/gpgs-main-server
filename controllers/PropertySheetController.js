@@ -8,7 +8,6 @@
 //   month: "short",
 //   year: "numeric",
 // }).replace(" ", "");
-// //  console.log("sjkhdjs" , sheetTitle)
 
 //   if (!spreadsheetId || !sheetTitle || isNaN(bedCount)) {
 //     return res.status(400).json({ success: false, message: "Invalid or missing parameters" });
@@ -148,7 +147,6 @@ const fetchPropertySheetData = async (req, res) => {
         });
       }
     }
-    console.log("result", result);
     return res.json({ success: true, total: result.length, data: result });
   } catch (err) {
     console.error("Error:", err.message);
