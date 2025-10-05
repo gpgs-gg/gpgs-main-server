@@ -59,7 +59,7 @@ const ClientDocumentUpload = async (req, res) => {
       return res.status(400).json({ error: '❌ Header row is empty or missing.' });
     }
 
-    const IDIndex = headers.indexOf("ID");
+    const IDIndex = headers.indexOf("ClientID");
     if (IDIndex === -1) {
       return res.status(400).json({ error: '❌ "ID" column not found in header.' });
     }
