@@ -2,27 +2,27 @@ const { AllSheetNames } = require("../Config");
 const { google } = require('googleapis');
 
 const changePassword = async (req, res) => {
+  const { LoginID } = req.body;
+  console.log("Received request body:", req.body);
+  if (!LoginID) {
+    return res.status(400).json({ error: '❌ Missing "LoginID" in request body.' });
+  }
 
-  try {
-    const { LoginID } = req.body;
+  const primarySheetId = "1qU4HIzA6gidPPVItkUOCczLxPsLowasSFG4V2y7TuYU";
+  const fallbackSheetId = "1AWJQlzuoxkhuR75GMq1EFpqexqDuI1WsxI14BON1olU";
 
-    if (!LoginID) {
-      return res.status(400).json({ error: '❌ Missing "LoginID" in request body.' });
-    }
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
 
-    const sheetTitle = AllSheetNames.EMPLOYEE_MASTER_TABLE;
+  const sheets = google.sheets({ version: 'v4', auth });
 
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    const sheets = google.sheets({ version: 'v4', auth });
-    const spreadsheetId = "1qU4HIzA6gidPPVItkUOCczLxPsLowasSFG4V2y7TuYU";
-
+  // Helper function to update row in a given spreadsheet and sheet
+  const updateSheet = async (spreadsheetId, sheetTitle) => {
     // Get headers
     const headerRes = await sheets.spreadsheets.values.get({
       spreadsheetId,
@@ -31,36 +31,34 @@ const changePassword = async (req, res) => {
 
     const headers = headerRes.data.values?.[0] || [];
     if (headers.length === 0) {
-      return res.status(400).json({ error: '❌ Header row is empty or missing.' });
+      throw new Error(`❌ Header row is empty or missing in sheet "${sheetTitle}".`);
     }
 
     const loginIdIndex = headers.indexOf("LoginID");
     if (loginIdIndex === -1) {
-      return res.status(400).json({ error: '❌ "Login ID" column not found in header.' });
+      throw new Error(`❌ "Login ID" column not found in sheet "${sheetTitle}".`);
     }
 
     // Get all rows
     const dataRes = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetTitle}!A2:Z`, // assuming up to Z
-    });
+      range: `${sheetTitle}!A2:AE`  
+    }); 
 
     const rows = dataRes.data.values || [];
 
-    // Match row index by Login ID (case-insensitive)
+    // Find row by LoginID
     const matchRowIndex = rows.findIndex(
       row => (row[loginIdIndex] || "").trim().toLowerCase() === LoginID.trim().toLowerCase()
     );
 
     if (matchRowIndex === -1) {
-      return res.status(404).json({
-        error: `❌ LoginID "${LoginID}" not found in sheet "${sheetTitle}".`,
-      });
+      return null; // Not found
     }
 
     const existingRow = rows[matchRowIndex] || [];
 
-    // Only update fields present in the request body
+    // Build updated row
     const updatedRow = headers.map((header, colIndex) => {
       const newValue = req.body.hasOwnProperty(header) ? req.body[header] : undefined;
       const existingValue = existingRow[colIndex] || "";
@@ -77,7 +75,8 @@ const changePassword = async (req, res) => {
       return existingValue;
     });
 
-    const sheetRowNumber = matchRowIndex + 2; // account for header row
+    // Update row in the sheet
+    const sheetRowNumber = matchRowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `${sheetTitle}!A${sheetRowNumber}`,
@@ -87,9 +86,41 @@ const changePassword = async (req, res) => {
       },
     });
 
-    return res.status(200).json({
-      message: `✅ Row for LoginID "${LoginID}" updated successfully.`,
-      updated: updatedRow,
+    return {
+      updatedRow,
+      sheetTitle,
+    };
+  };
+
+  try {
+    // Try updating in the primary sheet
+    // Try updating in the primary sheet
+    const primaryResult = await updateSheet(primarySheetId, AllSheetNames.EMPLOYEE_MASTER_TABLE);
+
+    if (primaryResult) {
+      return res.status(200).json({
+        message: `✅ Row for LoginID "${LoginID}" updated successfully in "${primaryResult.sheetTitle}".`,
+        updated: primaryResult.updatedRow,
+      });
+    }
+
+    console.log("🔁 Primary sheet did not match. Trying fallback sheet...");
+
+    // Fallback to MasterList
+    const fallbackResult = await updateSheet(fallbackSheetId, "MasterList");
+
+    if (fallbackResult) {
+      return res.status(200).json({
+        message: `✅ Row for LoginID "${LoginID}" updated successfully in fallback sheet "${fallbackResult.sheetTitle}".`,
+        updated: fallbackResult.updatedRow,
+      });
+    }
+
+    console.log("❌ Not found in fallback either.");
+
+    // Not found in either sheet
+    return res.status(404).json({
+      error: `❌ LoginID "${LoginID}" not found in any sheet.`,
     });
 
   } catch (error) {
@@ -101,7 +132,6 @@ const changePassword = async (req, res) => {
   }
 };
 
-
 module.exports = {
-  changePassword,  
-}
+  changePassword,
+};
