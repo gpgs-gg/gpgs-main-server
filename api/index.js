@@ -20,6 +20,8 @@ const updateTicketTableRoutes = require('../routes/createTicketRoutes');
 const changePasswordRoutes = require('../routes/changePasswordRoutes');
 const mainPropertySheetDataForClient = require('../routes/mainSheetDataForClientRoutes');
 const ClientDocumentUpload = require('../routes/ClientDocumentUploadRoutes');
+const DynamicValues = require('../routes/dynamicRoutes');
+
 
 
 const app = express();
@@ -44,6 +46,8 @@ app.use('/api', changePasswordRoutes);
 app.use('/api', clientRoutes);
 app.use('/api', mainPropertySheetDataForClient);
 app.use('/api', ClientDocumentUpload);
+app.use('/api', DynamicValues);
+
 
 module.exports = app;
 module.exports.handler = serverless(app);
@@ -70,6 +74,7 @@ module.exports.handler = serverless(app);
 // const changePasswordRoutes = require('./routes/changePasswordRoutes');
 // const mainPropertySheetDataForClient = require('./routes/mainSheetDataForClientRoutes');
 // const ClientDocumentUpload = require('./routes/ClientDocumentUploadRoutes');
+// const DynamicValues = require('./routes/dynamicRoutes');
 
 // const app = express();
 
@@ -93,6 +98,7 @@ module.exports.handler = serverless(app);
 // app.use('/api', clientRoutes);
 // app.use('/api', mainPropertySheetDataForClient);
 // app.use('/api', ClientDocumentUpload);
+// app.use('/api', DynamicValues);
 
 // const PORT = 3000;
 // app.listen(PORT, () => {

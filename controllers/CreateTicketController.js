@@ -296,6 +296,7 @@ const uploadToCloudinary = (fileBuffer, filename) => {
       {
         folder: 'tickets',
         public_id: filename.split('.')[0],
+        // public_id: `${filename.substring(0, filename.lastIndexOf('.')).replace(/[\s\.]/g, '-')}-${Date.now()}`,
         resource_type: 'auto',
       },
       (error, result) => {
