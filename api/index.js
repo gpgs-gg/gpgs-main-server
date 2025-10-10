@@ -1,11 +1,10 @@
 
-
 require('dotenv').config();
 const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
-
 const path = require("path")
+const bodyParser = require('body-parser');
 const sheetRoutes = require('../routes/sheetRoutes');
 const propertiesSheetRoutes = require('../routes/propertiesSheetRoutes');
 const propertySheetRoutes = require('../routes/propertySheetRoutes');
@@ -21,17 +20,19 @@ const changePasswordRoutes = require('../routes/changePasswordRoutes');
 const mainPropertySheetDataForClient = require('../routes/mainSheetDataForClientRoutes');
 const ClientDocumentUpload = require('../routes/ClientDocumentUploadRoutes');
 const DynamicValues = require('../routes/dynamicRoutes');
+const otpRoutes = require('../routes/otpRoutes');
 
 
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Use prefixed paths (important for serverless)
 // Use same route structure as serverless
+app.use('/api', otpRoutes);
 app.use('/api', sheetRoutes);
 app.use('/api', propertiesSheetRoutes);
 app.use('/api', propertySheetRoutes);
@@ -60,6 +61,7 @@ module.exports.handler = serverless(app);
 // const express = require('express');
 // const cors = require('cors');
 // const path = require("path")
+// const bodyParser = require('body-parser');
 // const sheetRoutes = require('./routes/sheetRoutes');
 // const propertiesSheetRoutes = require('./routes/propertiesSheetRoutes');
 // const propertySheetRoutes = require('./routes/propertySheetRoutes');  
@@ -75,6 +77,7 @@ module.exports.handler = serverless(app);
 // const mainPropertySheetDataForClient = require('./routes/mainSheetDataForClientRoutes');
 // const ClientDocumentUpload = require('./routes/ClientDocumentUploadRoutes');
 // const DynamicValues = require('./routes/dynamicRoutes');
+// const otpRoutes = require('./routes/otpRoutes');
 
 // const app = express();
 
@@ -84,6 +87,10 @@ module.exports.handler = serverless(app);
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // // Use same route structure as serverless
+// app.use(bodyParser.json());
+
+// // Use OTP routes
+// app.use('/api', otpRoutes);
 // app.use('/api', sheetRoutes);
 // app.use('/api', propertiesSheetRoutes);
 // app.use('/api', propertySheetRoutes);

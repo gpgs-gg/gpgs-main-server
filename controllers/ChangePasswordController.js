@@ -42,8 +42,8 @@ const changePassword = async (req, res) => {
     // Get all rows
     const dataRes = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetTitle}!A2:AE`  
-    }); 
+      range: `${sheetTitle}!A2:AZ`,  
+    });   
 
     const rows = dataRes.data.values || [];
 
