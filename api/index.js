@@ -4,6 +4,7 @@ const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
 const path = require("path")
+const cloudinary = require('cloudinary').v2;
 const bodyParser = require('body-parser');
 const sheetRoutes = require('../routes/sheetRoutes');
 const propertiesSheetRoutes = require('../routes/propertiesSheetRoutes');
@@ -30,8 +31,52 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Use prefixed paths (important for serverless)
+
 // Use same route structure as serverless
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
+app.use(bodyParser.json());
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
+app.get('/api/cloudinary-sign', (req, res) => {
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const public_id = req.query.public_id;
+    const folder = req.query.folder || 'tickets';
+
+    if (!public_id) {
+      return res.status(400).json({ error: 'Missing public_id in query params' });
+    }
+
+    const paramsToSign = {
+      timestamp,
+      folder,
+      public_id,
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      cloudinary.config().api_secret
+    );
+
+    res.json({
+      signature,
+      timestamp,
+      api_key: cloudinary.config().api_key,
+      folder,
+      public_id,
+    });
+  } catch (error) {
+    console.error('Error generating signature:', error);
+    res.status(500).json({ error: 'Failed to generate signature' });
+  }
+});
+
 app.use('/api', otpRoutes);
 app.use('/api', sheetRoutes);
 app.use('/api', propertiesSheetRoutes);
@@ -55,12 +100,25 @@ module.exports.handler = serverless(app);
 
 
 
+
+
+
+
+
+
+
 // local server 
 
 // require('dotenv').config();
 // const express = require('express');
 // const cors = require('cors');
 // const path = require("path")
+
+// const cloudinary = require('cloudinary').v2;
+
+
+
+
 // const bodyParser = require('body-parser');
 // const sheetRoutes = require('./routes/sheetRoutes');
 // const propertiesSheetRoutes = require('./routes/propertiesSheetRoutes');
@@ -87,7 +145,53 @@ module.exports.handler = serverless(app);
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // // Use same route structure as serverless
+// app.use(express.json({ limit: '100mb' }));
+// app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
 // app.use(bodyParser.json());
+// cloudinary.config({
+//   cloud_name: process.env.CLOUD_NAME,
+//   api_key: process.env.API_KEY,
+//   api_secret: process.env.API_SECRET,
+// });
+
+// app.get('/api/cloudinary-sign', (req, res) => {
+//   try {
+//     const timestamp = Math.floor(Date.now() / 1000);
+//     const public_id = req.query.public_id;
+//     const folder = req.query.folder || 'tickets';
+
+//     if (!public_id) {
+//       return res.status(400).json({ error: 'Missing public_id in query params' });
+//     }
+
+//     const paramsToSign = {
+//       timestamp,
+//       folder,
+//       public_id,
+//     };
+
+//     const signature = cloudinary.utils.api_sign_request(
+//       paramsToSign,
+//       cloudinary.config().api_secret
+//     );
+
+//     res.json({
+//       signature,
+//       timestamp,
+//       api_key: cloudinary.config().api_key,
+//       folder,
+//       public_id,
+//     });
+//   } catch (error) {
+//     console.error('Error generating signature:', error);
+//     res.status(500).json({ error: 'Failed to generate signature' });
+//   }
+// });
+
+
+
+
 
 // // Use OTP routes
 // app.use('/api', otpRoutes);

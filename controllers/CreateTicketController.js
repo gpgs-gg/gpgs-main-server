@@ -283,39 +283,159 @@ const { AllSheetNames } = require('../Config');
 require('dotenv').config();
 
 // Setup Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+// cloudinary.config({
+//   cloud_name: process.env.CLOUD_NAME,
+//   api_key: process.env.API_KEY,
+//   api_secret: process.env.API_SECRET,
+// });
 
-// === Cloudinary Upload Helper ===
-const uploadToCloudinary = (fileBuffer, filename) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'tickets',
-        public_id: filename.split('.')[0],
-        // public_id: `${filename.substring(0, filename.lastIndexOf('.')).replace(/[\s\.]/g, '-')}-${Date.now()}`,
-        resource_type: 'auto',
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result.secure_url);
-      }
-    );
-    streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-  });
-};
-
-// === Utility ===
-// const AllSheetNames = {
-//   TICKET_MASTER_TABLE: 'TicketMaster', // 👈 Change this if your sheet name is different
+// // === Cloudinary Upload Helper ===
+// const uploadToCloudinary = (fileBuffer, filename) => {
+//   return new Promise((resolve, reject) => {
+//     const uploadStream = cloudinary.uploader.upload_stream(
+//       {
+//         folder: 'tickets',
+//         public_id: filename.split('.')[0],
+//         // public_id: `${filename.substring(0, filename.lastIndexOf('.')).replace(/[\s\.]/g, '-')}-${Date.now()}`,
+//         resource_type: 'auto',
+//       },
+//       (error, result) => {
+//         if (error) reject(error);
+//         else resolve(result.secure_url);
+//       }
+//     );
+//     streamifier.createReadStream(fileBuffer).pipe(uploadStream);
+//   });
 // };
 
-// === Create Ticket ===
+// // === Utility ===
+// // const AllSheetNames = {
+// //   TICKET_MASTER_TABLE: 'TicketMaster', // 👈 Change this if your sheet name is different
+// // };
+
+// // === Create Ticket ===
+// const CreateTicket = async (req, res) => {
+//   try {
+//     const auth = new google.auth.GoogleAuth({
+//       credentials: {
+//         client_email: process.env.GOOGLE_CLIENT_EMAIL,
+//         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+//       },
+//       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+//     });
+
+//     const sheets = google.sheets({ version: 'v4', auth });
+//     const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
+//     const sheetTitle = req.query.sheet || AllSheetNames.TICKET_MASTER_TABLE;
+
+//     // Sheet Metadata
+//     const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId });
+//     const sheet = sheetMeta.data.sheets.find(s => s.properties.title === sheetTitle);
+//     if (!sheet) {
+//       return res.status(404).json({ error: `❌ Sheet titled "${sheetTitle}" not found.` });
+//     }
+//     const sheetId = sheet.properties.sheetId;
+
+//     // Headers
+//     const headerResponse = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: `${sheetTitle}!1:1`,
+//     });
+//     const headers = headerResponse.data.values?.[0] || [];
+
+//     if (headers.length === 0) {
+//       return res.status(400).json({ error: '❌ Header row is empty or missing.' });
+//     }
+
+//     // Get Ticket IDs
+//     const dataResponse = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: `${sheetTitle}!A2:A`,
+//     });
+//     const TicketIDs = dataResponse.data.values?.flat() || [];
+
+//     // Generate Ticket ID
+//     const currentYear = new Date().getFullYear();
+//     const lastID = TicketIDs[0] || `TKT-${currentYear}-0000`;
+//     const lastNumber = parseInt(lastID.split("-")[2]) || 0;
+//     const nextID = `TKT-${currentYear}-${(lastNumber + 1).toString().padStart(4, '0')}`;
+
+//     // Current Date
+//     const currentDate = new Date().toLocaleString('en-GB', {
+//       timeZone: 'Asia/Kolkata',
+//     });
+
+//     // Handle file uploads to Cloudinary
+//     const uploadedFileURLs = [];
+//     if (req.files?.length > 0) {
+//       for (const file of req.files) {
+//         const url = await uploadToCloudinary(file.buffer, file.originalname);
+//         uploadedFileURLs.push(url);
+//       }
+//     }
+
+//     // Prepare row data
+//     const rowData = headers.map(header => {
+//       switch (header) {
+//         case 'TicketID':
+//           return nextID;
+//         case 'DateCreated':
+//           return currentDate;
+//         case 'Attachment':
+//         case 'Images':
+//         case 'Files':
+//           return uploadedFileURLs.join(', ');
+//         default:
+//           const value = req.body[header];
+//           return typeof value === 'object' ? JSON.stringify(value) : value ?? "";
+//       }
+//     });
+
+//     // Insert new row
+//     await sheets.spreadsheets.batchUpdate({
+//       spreadsheetId,
+//       requestBody: {
+//         requests: [{
+//           insertDimension: {
+//             range: {
+//               sheetId,
+//               dimension: 'ROWS',
+//               startIndex: 1,
+//               endIndex: 2,
+//             },
+//             inheritFromBefore: false,
+//           },
+//         }],
+//       },
+//     });
+
+//     // Write values to inserted row
+//     await sheets.spreadsheets.values.update({
+//       spreadsheetId,
+//       range: `${sheetTitle}!A2`,
+//       valueInputOption: 'RAW',
+//       requestBody: {
+//         values: [rowData],
+//       },
+//     });
+
+//     res.status(200).json({
+//       message: `✅ New ticket created successfully.`,
+//       TicketID: nextID,
+//       inserted: rowData,
+//       files: uploadedFileURLs,
+//     });
+
+//   } catch (error) {
+//     console.error("❌ Error creating ticket:", error);
+//     res.status(500).json({ error: 'Failed to insert ticket row' });
+//   }
+// };
+
+
 const CreateTicket = async (req, res) => {
   try {
+    // Authenticate with Google Sheets API
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -326,9 +446,11 @@ const CreateTicket = async (req, res) => {
 
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
-    const sheetTitle = req.query.sheet || AllSheetNames.TICKET_MASTER_TABLE;
 
-    // Sheet Metadata
+    // Use sheet from query param or default
+    const sheetTitle = req.query.sheet || "Tickets";
+
+    // Get metadata and verify sheet exists
     const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId });
     const sheet = sheetMeta.data.sheets.find(s => s.properties.title === sheetTitle);
     if (!sheet) {
@@ -336,7 +458,7 @@ const CreateTicket = async (req, res) => {
     }
     const sheetId = sheet.properties.sheetId;
 
-    // Headers
+    // Get column headers
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!1:1`,
@@ -347,34 +469,25 @@ const CreateTicket = async (req, res) => {
       return res.status(400).json({ error: '❌ Header row is empty or missing.' });
     }
 
-    // Get Ticket IDs
+    // Get all TicketIDs
     const dataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!A2:A`,
     });
     const TicketIDs = dataResponse.data.values?.flat() || [];
 
-    // Generate Ticket ID
+    // Generate new TicketID
     const currentYear = new Date().getFullYear();
     const lastID = TicketIDs[0] || `TKT-${currentYear}-0000`;
     const lastNumber = parseInt(lastID.split("-")[2]) || 0;
     const nextID = `TKT-${currentYear}-${(lastNumber + 1).toString().padStart(4, '0')}`;
 
-    // Current Date
+    // Get current timestamp
     const currentDate = new Date().toLocaleString('en-GB', {
       timeZone: 'Asia/Kolkata',
     });
 
-    // Handle file uploads to Cloudinary
-    const uploadedFileURLs = [];
-    if (req.files?.length > 0) {
-      for (const file of req.files) {
-        const url = await uploadToCloudinary(file.buffer, file.originalname);
-        uploadedFileURLs.push(url);
-      }
-    }
-
-    // Prepare row data
+    // Construct row data based on headers
     const rowData = headers.map(header => {
       switch (header) {
         case 'TicketID':
@@ -383,15 +496,34 @@ const CreateTicket = async (req, res) => {
           return currentDate;
         case 'Attachment':
         case 'Images':
-        case 'Files':
-          return uploadedFileURLs.join(', ');
+        case 'Files': {
+          const value = req.body[header];
+
+          if (typeof value === 'string') {
+            try {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) {
+                return parsed.join(', ');
+              }
+              return value;
+            } catch {
+              return value; // not JSON, just return as is
+            }
+          }
+
+          if (Array.isArray(value)) {
+            return value.join(', ');
+          }
+
+          return value ?? '';
+        }
         default:
           const value = req.body[header];
           return typeof value === 'object' ? JSON.stringify(value) : value ?? "";
       }
     });
 
-    // Insert new row
+    // Insert row at position 2 (A2)
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -409,7 +541,7 @@ const CreateTicket = async (req, res) => {
       },
     });
 
-    // Write values to inserted row
+    // Write values to the newly inserted row
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `${sheetTitle}!A2`,
@@ -419,11 +551,11 @@ const CreateTicket = async (req, res) => {
       },
     });
 
+    // Success response
     res.status(200).json({
       message: `✅ New ticket created successfully.`,
       TicketID: nextID,
       inserted: rowData,
-      files: uploadedFileURLs,
     });
 
   } catch (error) {
@@ -434,22 +566,9 @@ const CreateTicket = async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 // === Update Ticket ===
-const updateTicketSheetData = async (req, res) => {
-  const bodyAttachmentRaw = req.body.Attachment || "";
 
+const updateTicketSheetData = async (req, res) => {
   try {
     if (!req.body || !req.body.TicketID) {
       return res.status(400).json({ error: '❌ Missing "TicketID" in request body.' });
@@ -468,7 +587,7 @@ const updateTicketSheetData = async (req, res) => {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = "1kHjPWalsEaPO6IS756N43IFk7z1xRcrDeO6VG2AurwI";
 
-    // Headers
+    // Get headers
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!1:1`,
@@ -484,6 +603,7 @@ const updateTicketSheetData = async (req, res) => {
       return res.status(400).json({ error: '❌ "TicketID" column not found in header.' });
     }
 
+    // Get all rows
     const dataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${sheetTitle}!A2:Z`,
@@ -500,31 +620,36 @@ const updateTicketSheetData = async (req, res) => {
       });
     }
 
-    // Upload new files to Cloudinary
-    const uploadedFileURLs = [];
-    if (req.files?.length > 0) {
-      for (const file of req.files) {
-        const url = await uploadToCloudinary(file.buffer, file.originalname);
-        uploadedFileURLs.push(url);
-      }
-    }
-
-    // --- Build update set ---
+    // === Build updated values ===
     const updates = [];
+
     for (const header of headers) {
       if (header === "TicketID") continue;
 
-      if (header === "Attachment") {
-        const validUrlPattern = /(https?:\/\/[^\s",]+)/g;
+      if (header === "Attachment" || header === "Files" || header === "Images") {
+        const rawValue = req.body[header];
 
-        const existingAttachments = [...bodyAttachmentRaw.matchAll(validUrlPattern)]
-          .map(match => match[0].trim())
-          .filter(url => !url.startsWith("blob:"));
+        let cleaned = "";
 
-        const combined = [...existingAttachments, ...uploadedFileURLs].join(", ");
-        if (combined.length > 0) {
+        if (typeof rawValue === "string") {
+          try {
+            const parsed = JSON.parse(rawValue);
+            if (Array.isArray(parsed)) {
+              cleaned = parsed.join(", ");
+            } else {
+              cleaned = rawValue;
+            }
+          } catch {
+            // Not a JSON string — assume it's plain string
+            cleaned = rawValue;
+          }
+        } else if (Array.isArray(rawValue)) {
+          cleaned = rawValue.join(", ");
+        }
+
+        if (cleaned) {
           const colIndex = headers.indexOf(header);
-          updates.push({ colIndex, value: combined });
+          updates.push({ colIndex, value: cleaned });
         }
       } else if (Object.prototype.hasOwnProperty.call(req.body, header)) {
         let value = req.body[header];
@@ -540,10 +665,10 @@ const updateTicketSheetData = async (req, res) => {
       return res.status(200).json({ message: '⚠️ No changes to update.', updated: false });
     }
 
-    // Calculate range
-    const sheetRowNumber = matchRowIndex + 2;
+    // Sort updates by column
     updates.sort((a, b) => a.colIndex - b.colIndex);
 
+    const sheetRowNumber = matchRowIndex + 2;
     const startCol = String.fromCharCode(65 + updates[0].colIndex);
     const endCol = String.fromCharCode(65 + updates[updates.length - 1].colIndex);
     const range = `${sheetTitle}!${startCol}${sheetRowNumber}:${endCol}${sheetRowNumber}`;
@@ -564,7 +689,6 @@ const updateTicketSheetData = async (req, res) => {
     return res.status(200).json({
       message: `✅ Ticket "${req.body.TicketID}" updated successfully.`,
       updatedColumns: updates.map(u => headers[u.colIndex]),
-      filesProcessed: req.files?.map(f => f.originalname) || [],
     });
 
   } catch (error) {
