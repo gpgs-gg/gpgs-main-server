@@ -22,8 +22,7 @@ const mainPropertySheetDataForClient = require('../routes/mainSheetDataForClient
 const ClientDocumentUpload = require('../routes/ClientDocumentUploadRoutes');
 const DynamicValues = require('../routes/dynamicRoutes');
 const otpRoutes = require('../routes/otpRoutes');
-
-
+const CreateClient = require('../routes/CreateClientRoutes');
 
 const app = express();
 app.use(cors());
@@ -76,7 +75,7 @@ app.get('/api/cloudinary-sign', (req, res) => {
     res.status(500).json({ error: 'Failed to generate signature' });
   }
 });
-
+  
 app.use('/api', otpRoutes);
 app.use('/api', sheetRoutes);
 app.use('/api', propertiesSheetRoutes);
@@ -93,6 +92,8 @@ app.use('/api', clientRoutes);
 app.use('/api', mainPropertySheetDataForClient);
 app.use('/api', ClientDocumentUpload);
 app.use('/api', DynamicValues);
+app.use('/api', CreateClient);
+
 
 
 module.exports = app;
@@ -116,9 +117,6 @@ module.exports.handler = serverless(app);
 
 // const cloudinary = require('cloudinary').v2;
 
-
-
-
 // const bodyParser = require('body-parser');
 // const sheetRoutes = require('./routes/sheetRoutes');
 // const propertiesSheetRoutes = require('./routes/propertiesSheetRoutes');
@@ -136,6 +134,7 @@ module.exports.handler = serverless(app);
 // const ClientDocumentUpload = require('./routes/ClientDocumentUploadRoutes');
 // const DynamicValues = require('./routes/dynamicRoutes');
 // const otpRoutes = require('./routes/otpRoutes');
+// const CreateClient = require('./routes/CreateClientRoutes');
 
 // const app = express();
 
@@ -210,6 +209,7 @@ module.exports.handler = serverless(app);
 // app.use('/api', mainPropertySheetDataForClient);
 // app.use('/api', ClientDocumentUpload);
 // app.use('/api', DynamicValues);
+// app.use('/api', CreateClient);
 
 // const PORT = 3000;
 // app.listen(PORT, () => {

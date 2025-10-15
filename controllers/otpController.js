@@ -70,7 +70,7 @@ const transporter = nodemailer.createTransport({
 
 // In-memory OTP store (for demo purposes)
 const otpStore = {}; // Format: { email: { otp: '123456', expiresAt: Date } }
-
+   
 // Send OTP
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -109,23 +109,28 @@ exports.verifyOtp = (req, res) => {
   }
 
   const record = otpStore[email];
+  console.log(record);
 
   if (!record) {
     return res.status(400).json({ message: 'No OTP found for this email' });
   }
 
   const { otp: storedOtp, expiresAt } = record;
-
+ 
+  // Check if OTP is expired
   if (new Date() > expiresAt) {
     delete otpStore[email]; // Clean up expired OTP
     return res.status(400).json({ message: 'OTP has expired' });
   }
 
-  if (otp !== storedOtp) {
+  // Sanitize and compare
+  const sanitizedInputOtp = String(otp).trim();
+  const sanitizedStoredOtp = String(storedOtp).trim();
+      
+  if (sanitizedInputOtp !== sanitizedStoredOtp) {
     return res.status(400).json({ message: 'Invalid OTP' });
   }
-
-  // OTP is valid
+  // OTP is valid 
   delete otpStore[email]; // Optional: remove OTP after successful verification
-  res.status(200).json({ message: 'OTP verified successfully' });
+  return res.status(200).json({ message: 'OTP verified successfully' });
 };
