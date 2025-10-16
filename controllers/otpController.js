@@ -70,7 +70,7 @@ const transporter = nodemailer.createTransport({
 
 // In-memory OTP store (for demo purposes)
 const otpStore = {}; // Format: { email: { otp: '123456', expiresAt: Date } }
-   
+    console.log(11111111111111, otpStore);
 // Send OTP
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -80,9 +80,11 @@ exports.sendOtp = async (req, res) => {
   }
 
   const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  otpStore[email] = { otp, expiresAt }; // Store OTP and expiration
+  otpStore[email] = { otp, expiresAt };
+
+  console.log(`Generated OTP for ${email}: ${otp}, expires at ${expiresAt}`);
 
   const mailOptions = {
     from: 'gopalspayingguestservices@gmail.com',
@@ -93,14 +95,13 @@ exports.sendOtp = async (req, res) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: 'OTP sent successfully' , otp: otp}); // For demo purposes, sending OTP back; remove in production
+    res.status(200).json({ message: 'OTP sent successfully' , otp: otp});
   } catch (error) {
     console.error('Error sending email:', error);
     res.status(500).json({ message: 'Failed to send OTP' });
   }
 };
 
-// Verify OTP
 exports.verifyOtp = (req, res) => {
   const { email, otp } = req.body;
 
@@ -109,28 +110,27 @@ exports.verifyOtp = (req, res) => {
   }
 
   const record = otpStore[email];
-  console.log(record);
 
   if (!record) {
+    console.log(`No OTP found for email: ${email}`);
     return res.status(400).json({ message: 'No OTP found for this email' });
   }
 
   const { otp: storedOtp, expiresAt } = record;
- 
-  // Check if OTP is expired
+
   if (new Date() > expiresAt) {
-    delete otpStore[email]; // Clean up expired OTP
+    console.log(`OTP expired for ${email}`);
+    delete otpStore[email];
     return res.status(400).json({ message: 'OTP has expired' });
   }
 
-  // Sanitize and compare
-  const sanitizedInputOtp = String(otp).trim();
-  const sanitizedStoredOtp = String(storedOtp).trim();
-      
-  if (sanitizedInputOtp !== sanitizedStoredOtp) {
+  if (String(otp).trim() !== String(storedOtp).trim()) {
+    console.log(`Invalid OTP attempt for ${email}: input=${otp} stored=${storedOtp}`);
     return res.status(400).json({ message: 'Invalid OTP' });
   }
-  // OTP is valid 
-  delete otpStore[email]; // Optional: remove OTP after successful verification
+
+  // Successful verification
+  console.log(`OTP verified for ${email}`);
+  delete otpStore[email]; // Remove OTP after verification
   return res.status(200).json({ message: 'OTP verified successfully' });
 };
