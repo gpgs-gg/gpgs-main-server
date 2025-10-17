@@ -5,9 +5,6 @@ const { AllSheetNames } = require('../Config');
 
 const ClientCreation = async (req, res) => {
   try {
-
-    if (req.body.mode == "Create") {    
-     
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -148,7 +145,7 @@ const ClientCreation = async (req, res) => {
       inserted: rowData,
     });
 
-    }
+ 
 
   } catch (error) {
     console.error("❌ Error creating/updating row:", error);

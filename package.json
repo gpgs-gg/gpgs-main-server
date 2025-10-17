@@ -19,9 +19,11 @@
     "express": "^5.1.0",
     "google-spreadsheet": "^3.3.0",
     "googleapis": "^154.1.0",
+    "ioredis": "^5.8.1",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.9",
     "nodemon": "^3.1.10",
+    "redis": "^5.8.3",
     "serverless-http": "^3.2.0",
     "streamifier": "^0.1.1"
   }
