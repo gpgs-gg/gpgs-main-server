@@ -54,7 +54,8 @@ const fetchPropertySheetData = async (req, res) => {
           CurDueAmt,
           DADue,
           FullName,
-          PreDueAmt
+          PreDueAmt,
+          ClientID
         });
       }
     }
