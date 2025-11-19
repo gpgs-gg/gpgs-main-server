@@ -45,6 +45,7 @@ const fetchPropertySheetData = async (req, res) => {
       }
       // const DADue = row["DADue"]?.toString().trim() || "";
       const FullName = row["FullName"]?.toString().trim() || "";
+      const ClientID = row["ClientID"]?.toString().trim() || "";
       const PreDueAmt = row["PreDueAmt"]?.toString().trim() || "";
       // const CVD = row["CVD"]?.toString().trim() || "";
       // const NLD = row["NLD"]?.toString().trim() || "";
